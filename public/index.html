@@ -1,1 +1,123 @@
 
+<!doctype html>
+<html lang="pt-MZ">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>RADAR DIGITAL — Central de Verificação</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f3f6fa;color:#111827;font-family:Arial,sans-serif}.wrap{max-width:980px;margin:auto;padding:16px 13px 50px}
+.hero{background:#0b1220;color:#fff;border-radius:18px;padding:25px 20px;margin-bottom:15px}.hero h1{margin:0;font-size:27px}.hero p{margin:6px 0 0;color:#cbd5e1}
+.card{background:#fff;border:1px solid #dbe3ec;border-radius:17px;padding:19px;margin-bottom:15px;box-shadow:0 5px 20px #0f172a0b}
+label{display:block;font-weight:800;font-size:14px;margin-bottom:8px}input,textarea{width:100%;padding:15px;border:1px solid #cbd5e1;border-radius:11px;font-size:17px}textarea{font:14px Arial;min-height:220px}input:focus,textarea:focus{outline:0;border-color:#0f766e;box-shadow:0 0 0 3px #0f766e18}
+button{border:0;border-radius:11px;padding:14px 16px;font-weight:800;font-size:14px;cursor:pointer;background:#0f766e;color:#fff}.btnrow{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}.wide{width:100%}.dark{background:#1e293b}.blue{background:#075985}
+button:disabled{opacity:.5;cursor:not-allowed}.hint,.notice{font-size:12px;color:#64748b;line-height:1.5}.status{display:none;margin-top:12px;padding:11px;border-radius:10px;font-weight:700}.status.show{display:block}.ok{background:#dcfce7;color:#166534}.err{background:#fee2e2;color:#991b1b}.wait{background:#eef2ff;color:#3730a3}
+h2{font-size:18px;margin:0 0 12px}.pill{display:inline-block;padding:7px 10px;border-radius:999px;background:#eef2f7;font-size:12px;font-weight:800;margin:3px}.pill.ok{background:#dcfce7;color:#166534}.pill.warn{background:#fef3c7;color:#92400e}
+.source{border:1px solid #dbe3ec;border-radius:11px;padding:11px;margin:8px 0}.source a{display:block;color:#075985;font-weight:700;word-break:break-word;margin-top:5px}.source small{color:#64748b}
+pre{white-space:pre-wrap;font:inherit;line-height:1.55;margin:0}.result,.compare{display:none}.result.show,.compare.show{display:block}
+@media(max-width:620px){.btnrow{grid-template-columns:1fr}.hero h1{font-size:24px}.card{padding:16px}}
+</style></head>
+<body><main class="wrap">
+<header class="hero"><h1>RADAR DIGITAL</h1><p>Central de Verificação de Plataformas de Renda Online</p></header>
+
+<section class="card">
+<label for="platform">PLATAFORMA A INVESTIGAR</label>
+<input id="platform" maxlength="120" placeholder="Ex.: CrowdGen" autocomplete="off">
+<p class="hint">O mesmo nome é usado na investigação, no protocolo e na comparação.</p>
+<div class="btnrow">
+<button id="investigate">🔎 INVESTIGAR PLATAFORMA</button>
+<button id="protocol" class="dark">📋 COPIAR PROTOCOLO</button>
+</div>
+<div id="status" class="status"></div>
+</section>
+
+<section id="result" class="card result">
+<h2>RESULTADO DA INVESTIGAÇÃO</h2><div id="meta"></div>
+<h2 style="margin-top:15px">FONTES VERIFICADAS</h2><div id="sources"></div>
+<h2 style="margin-top:18px">INFORMAÇÃO PROCESSADA</h2><pre id="answer"></pre>
+<div class="btnrow"><button id="copyResult" class="blue">COPIAR RESULTADO</button><button id="showCompare" class="dark">TESTE DE CONSISTÊNCIA</button></div>
+</section>
+
+<section id="compare" class="card compare">
+<h2>TESTE DE CONSISTÊNCIA</h2>
+<p class="notice">Cole aqui o resultado obtido por outra IA usando o protocolo copiado para a mesma plataforma. A comparação deve servir para encontrar divergências que depois serão verificadas nas fontes.</p>
+<textarea id="external" placeholder="Cole aqui o segundo resultado..."></textarea>
+<button id="compareBtn" class="wide" style="margin-top:10px">COMPARAR RESULTADOS</button>
+<div id="comparison" style="margin-top:14px"></div>
+</section>
+
+<section class="card">
+<p class="notice"><b>Regra de rigor:</b> se uma informação não puder ser confirmada, o resultado deve indicar “NÃO FOI POSSÍVEL CONFIRMAR.” Esta versão pública não contém chaves de API. A investigação automática só será ativada quando estiver ligada a um backend seguro do Radar.</p>
+</section>
+</main>
+
+<script>
+const $=id=>document.getElementById(id), p=$("platform"),s=$("status"),result=$("result"),compare=$("compare");
+let last=null;
+function msg(t,c){s.className="status show "+c;s.textContent=t}
+function requireName(){let n=p.value.trim();if(!n){p.focus();msg("Escreva o nome da plataforma.","err");return null}return n}
+function protocolText(n){return `RADAR DIGITAL — PROTOCOLO DE VERIFICAÇÃO
+
+Pesquise a WEB antes de responder. Cruze fontes oficiais e independentes, priorizando informações atuais de 2025 e 2026. NÃO use o ChatGPT como fonte. NÃO invente informações, pagamentos, tarefas, países aceitos ou links.
+
+Investigue a plataforma considerando principalmente:
+- legitimidade e empresa responsável;
+- funcionamento e tipos de tarefas;
+- disponibilidade para Moçambique;
+- existência de tarefas para moçambicanos;
+- pagamentos disponíveis em Moçambique;
+- PayPal, Payoneer, Airtm, transferência bancária, SWIFT;
+- M-Pesa e e-Mola;
+- reclamações, atrasos, bloqueios e problemas de saque;
+- informações recentes.
+
+IMPORTANTE:
+Não confunda disponibilidade internacional com disponibilidade em Moçambique.
+Não considere um método de pagamento disponível em outros países como disponível em Moçambique.
+Se uma informação não puder ser confirmada, escreva exatamente:
+"NÃO FOI POSSÍVEL CONFIRMAR."
+
+FORMATO OBRIGATÓRIO:
+
+PARTE 1 — FONTES VERIFICADAS
+
+Comece dizendo:
+
+"Depois de verificarmos a [NOME DA PLATAFORMA] em [NÚMERO] fontes oficiais e independentes, chegamos às seguintes informações."
+
+Em seguida, liste SOMENTE as fontes realmente utilizadas na investigação, com o nome da fonte e o link direto clicável.
+
+PARTE 2 — INFORMAÇÃO PROCESSADA
+
+Apresente aproximadamente 500–600 caracteres e organize em:
+1. Legitimidade.
+2. Funcionamento.
+3. Moçambique.
+4. Pagamentos.
+5. M-Pesa/e-Mola.
+6. Oportunidades.
+7. Avaliação final.
+
+PLATAFORMA A INVESTIGAR:
+${n}`}
+$("protocol").onclick=async()=>{let n=requireName();if(!n)return;await navigator.clipboard.writeText(protocolText(n));msg("✓ Protocolo copiado com o nome da plataforma: "+n,"ok")};
+
+$("investigate").onclick=async()=>{
+ let n=requireName();if(!n)return;
+ const endpoint=window.RADAR_API_ENDPOINT||"";
+ if(!endpoint){msg("A página foi preparada para o carregamento estático, mas a investigação automática precisa de um backend seguro. Não coloque uma chave de IA nesta página pública.","err");return}
+ $("investigate").disabled=true;msg("Investigação em andamento...","wait");
+ try{let r=await fetch(endpoint.replace(/\/$/,"")+"/api/investigate",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({platform:n})});let d=await r.json();if(!r.ok)throw Error(d.error||"Falha na investigação");last=d;render(d);msg("✓ Investigação concluída.","ok");result.scrollIntoView({behavior:"smooth"})}
+ catch(e){msg("Erro: "+e.message,"err")}finally{$("investigate").disabled=false}
+};
+function render(d){result.classList.add("show");$("meta").innerHTML=`<span class="pill">${d.platform}</span><span class="pill">${d.checked_at}</span><span class="pill">${d.verification_level}</span><span class="pill">${d.source_count} fontes</span>`;$("sources").innerHTML=(d.sources||[]).map((x,i)=>`<div class="source"><b>${i+1}. ${x.name}</b><small>${x.type||"Fonte Web"}</small><a href="${x.url}" target="_blank" rel="noopener">${x.url}</a></div>`).join("")||"NÃO FOI POSSÍVEL CONFIRMAR.";$("answer").textContent=d.processed_information||"NÃO FOI POSSÍVEL CONFIRMAR."}
+$("copyResult").onclick=async()=>{if(!last)return;let t=`RADAR DIGITAL — RESULTADO DA INVESTIGAÇÃO\nPLATAFORMA: ${last.platform}\nDATA: ${last.checked_at}\nNÍVEL: ${last.verification_level}\n\nFONTES VERIFICADAS\n${(last.sources||[]).map((x,i)=>`${i+1}. ${x.name} — ${x.url}`).join("\n")}\n\nINFORMAÇÃO PROCESSADA\n${last.processed_information}`;await navigator.clipboard.writeText(t);msg("✓ Resultado copiado.","ok")};
+$("showCompare").onclick=()=>compare.classList.add("show");
+$("compareBtn").onclick=async()=>{if(!last){$("comparison").textContent="Faça primeiro uma investigação ou cole um resultado do Radar.";return}let text=$("external").value.trim();if(!text){$("comparison").textContent="Cole primeiro o segundo resultado.";return}let endpoint=window.RADAR_API_ENDPOINT||"";if(!endpoint){$("comparison").textContent="A comparação automática precisa do backend seguro do Radar.";return}$("compareBtn").disabled=true;$("comparison").textContent="Comparando...";try{let r=await fetch(endpoint.replace(/\/$/,"")+"/api/compare",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({platform:last.platform,radar:last.processed_information,external:text})});let d=await r.json();if(!r.ok)throw Error(d.error||"Falha");$("comparison").innerHTML=`<b>${d.level}</b><pre style="margin-top:10px">${d.summary}</pre>`}catch(e){$("comparison").textContent="Erro: "+e.message}finally{$("compareBtn").disabled=false}};
+</script>
+<script>
+/* Não coloque chaves de API neste arquivo público.
+   Depois de publicarmos o backend seguro, pode ser configurado:
+   window.RADAR_API_ENDPOINT="https://seu-endpoint";
+*/
+</script>
+</body></html>
