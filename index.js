@@ -50,6 +50,69 @@ function dedupe(results) {
 }
 
 async function braveSearch(query, env) {
+  const u = new URL("https://html.duckduckgo.com/html/");
+  u.searchParams.set("q", query);
+
+  const r = await fetch(u.toString(), {
+    headers: {
+      "User-Agent": "Mozilla/5.0 (compatible; RadarDigital/1.0)"
+    }
+  });
+
+  if (!r.ok) {
+    throw new Error(`Busca Web HTTP ${r.status}`);
+  }
+
+  const html = await r.text();
+  const results = [];
+
+  const blocks = html.split("result__body").slice(1);
+
+  for (const block of blocks.slice(0, 10)) {
+    const linkMatch = block.match(
+      /class="result__a"[^>]*href="([^"]+)"/i
+    );
+
+    if (!linkMatch) continue;
+
+    let url = linkMatch[1];
+
+    try {
+      if (url.startsWith("//")) {
+        url = "https:" + url;
+      }
+
+      const parsed = new URL(url);
+
+      if (parsed.hostname.includes("duckduckgo.com")) {
+        const target = parsed.searchParams.get("uddg");
+        if (target) url = decodeURIComponent(target);
+      }
+    } catch {}
+
+    const titleMatch = block.match(
+      /class="result__a"[^>]*>([\s\S]*?)<\/a>/i
+    );
+
+    const snippetMatch = block.match(
+      /class="result__snippet"[^>]*>([\s\S]*?)<\/a?>/i
+    );
+
+    const title = cleanText(titleMatch?.[1] || "");
+    const description = cleanText(snippetMatch?.[1] || "");
+
+    if (url && title) {
+      results.push({
+        title,
+        url,
+        description,
+        extra: ""
+      });
+    }
+  }
+
+  return results;
+}
   if (!env.BRAVE_SEARCH_API_KEY) throw new Error("BRAVE_SEARCH_API_KEY não configurada.");
   const u = new URL("https://api.search.brave.com/res/v1/web/search");
   u.searchParams.set("q", query);
